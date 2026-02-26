@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "path": "app",
+      "name": "AL Runtime Compiler"
+    },
+    {
+      "path": "test",
+      "name": "AL Runtime Compiler Tests"
+    }
+  ],
+  "settings": {}
+}

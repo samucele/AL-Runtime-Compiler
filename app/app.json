@@ -12,6 +12,13 @@
   "logo": "",
   "dependencies": [],
   "screenshots": [],
+  "internalsVisibleTo": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "AL Runtime Compiler Tests",
+      "publisher": "Samuele Celebron"
+    }
+  ],
   "platform": "1.0.0.0",
   "application": "27.0.0.0",
   "idRanges": [

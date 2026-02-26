@@ -23,7 +23,7 @@ Inspired by Erik Hougaard's [Simple Object Designer](https://youtu.be/wOOGFP-6XE
 
 ## Architecture
 
-The project is organized into three layers, each with a clear responsibility. Total: 16 AL files across 3 layers.
+The project is organized into three layers, each with a clear responsibility, plus a dedicated test project.
 
 ```
 app/                               # Main extension
@@ -55,6 +55,10 @@ app/                               # Main extension
 
 test/                              # Test extension (depends on main app)
 └── src/                           # ID range 50150-50199
+    ├── UnitTests              (50150) ALCodeWriter + BinaryWriter
+    ├── IntegrationTests       (50160) TableExtBuilder + PageExtBuilder
+    ├── ScenarioTests          (50170) Full pipeline + wizard validation
+    └── EdgeCaseTests          (50180) Errors + boundaries + all types
 ```
 
 ### Layer 1: Compiler
@@ -149,6 +153,47 @@ These are critical — BC will reject the app if encoding is wrong:
    - Step 2: Pick a target table and page
    - Step 3: Define a field (ID, Name, Data Type, Placement)
    - Step 4: Review and build (Download or Publish)
+
+## Testing
+
+The project includes a comprehensive test suite with 83 tests across 4 test codeunits, all passing.
+
+### Test Structure
+
+Test project located in `test/` folder, uses ID range 50150-50199, depends on main app + Library Assert.
+
+**Codeunit 50150 "ARC Unit Tests"** — 24 tests
+- ALCodeWriter: Object/block/field/property formatting, indentation, reset
+- BinaryWriter: HexToSignedInt32, GuidToLEIntegers
+
+**Codeunit 50160 "ARC Integration Tests"** — 21 tests
+- TableExtBuilder: Text/Integer/Code/Option fields, SymRef JSON, source file path, entitlement code, multiple fields, reset
+- PageExtBuilder: addafter/addbefore, quoted anchors, SymRef JSON with ControlChanges, multiple fields
+
+**Codeunit 50170 "ARC Scenario Tests"** — 12 tests
+- Full AppBuilder pipeline (SetMetadata → AddSource → Build → verify blob)
+- NAVX header magic bytes verification
+- PreviewCode
+- ValidateStep progression
+- Multi-field and option field scenarios
+
+**Codeunit 50180 "ARC Edge Case Tests"** — 26 tests
+- Validation errors (missing target/objectId/fields)
+- Boundary values (min/max int32, zero, -1)
+- All 8 field data types
+- Default lengths
+
+### Running Tests
+
+```powershell
+$cred = New-Object PSCredential('admin', (ConvertTo-SecureString 'admin' -AsPlainText -Force))
+
+# Run individual test suites
+Run-TestsInBcContainer -containerName [container] -credential $cred -testCodeunit 50150  # Unit
+Run-TestsInBcContainer -containerName [container] -credential $cred -testCodeunit 50160  # Integration
+Run-TestsInBcContainer -containerName [container] -credential $cred -testCodeunit 50170  # Scenario
+Run-TestsInBcContainer -containerName [container] -credential $cred -testCodeunit 50180  # Edge Case
+```
 
 ## Limitations
 

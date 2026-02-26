@@ -26,91 +26,35 @@ Inspired by Erik Hougaard's [Simple Object Designer](https://youtu.be/wOOGFP-6XE
 The project is organized into three layers, each with a clear responsibility. Total: 16 AL files across 3 layers.
 
 ```
-src/
-├── Compiler/              # Layer 1: Generic .app packaging (5 codeunits)
-│   ├── AppBuilder.Codeunit.al (50100)
-│   │     Orchestrates the full build pipeline. Accumulates source files,
-│   │     SymRef fragments, and entitlement entries, then produces a valid
-│   │     .app blob with NAVX header. Integration events: OnBeforeBuildApp,
-│   │     OnCollectAdditionalFiles, OnAfterBuildApp.
-│   ├── ContentGenerator.Codeunit.al (50101)
-│   │     Generates all metadata files: NavxManifest.xml, [Content_Types].xml,
-│   │     SymbolReference.json, DocComments.xml, navigation.xml,
-│   │     MediaIdListing.xml, entitlement XML. Handles encoding (BOM/no-BOM)
-│   │     and line endings per NAVX spec.
-│   ├── BinaryWriter.Codeunit.al (50102)
-│   │     Writes the 40-byte NAVX binary header. Handles GUID-to-little-endian
-│   │     integer conversion.
-│   ├── EnvironmentResolver.Codeunit.al (50103)
-│   │     Reads BC runtime info: auto-detects application version, runtime
-│   │     version, target platform (Cloud/OnPremises), and builds dependency
-│   │     XML from installed app metadata.
-│   └── AppPublisher.Codeunit.al (50110)
-│         Downloads .app via browser (DownloadFromStream) and publishes via
-│         ExtensionManagement.UploadExtension. Queries deployment status.
-│
-├── ObjectBuilder/         # Layer 2: AL object source generation (3 codeunits + 2 enums)
-│   ├── Codeunit/
-│   │   ├── ALCodeWriter.Codeunit.al (50104)
-│   │   │     Structured AL syntax builder that produces well-formatted AL
-│   │   │     source code using TextBuilder with indent tracking and LF-only
-│   │   │     line endings. Supports objects, blocks, fields, page fields,
-│   │   │     properties.
-│   │   ├── TableExtBuilder.Codeunit.al (50105)
-│   │   │     Generates table extension AL source code and SymbolReference
-│   │   │     JSON fragments. Supports multiple field types.
-│   │   └── PageExtBuilder.Codeunit.al (50106)
-│   │         Generates page extension AL source code and SymbolReference
-│   │         JSON. Supports configurable placement (addafter/addbefore)
-│   │         with field-level anchors.
-│   └── Enum/
-│       ├── FieldDataType.Enum.al (50107)
-│       │     Text, Code, Integer, Decimal, Boolean, Date, DateTime, Option
-│       └── PlacementType.Enum.al (50108)
-│             addafter (value 0), addbefore (value 1). Only field-level
-│             anchors from the Page Control Field virtual table.
-│
-├── PoC/                   # Layer 3: Proof-of-concept UI (1 codeunit + 1 table + 3 pages)
-│   ├── Codeunit/
-│   │   └── AppBuildRunner.Codeunit.al (50114)
-│   │         Orchestrates the app build workflow. Delegates to ObjectBuilder
-│   │         and Compiler layers. Validates wizard steps (1-3), handles
-│   │         generation, download, publish. Has OpenDeploymentStatus
-│   │         notification callback.
-│   ├── Table/
-│   │   └── AppBuilderBuffer.Table.al (50113)
-│   │         Temporary table for wizard state. Fields: App Name, Publisher,
-│   │         Version (Major/Minor/Build/Revision), Target Table/Page (with
-│   │         resolved names and App Package IDs), Field definition (Id, Name,
-│   │         Data Type, Length, Option String), Placement (Type, Anchor
-│   │         Control), Object IDs (Table Ext, Page Ext). OnValidate triggers
-│   │         resolve table/page names from AllObjWithCaption and Page Metadata.
-│   └── Page/
-│       ├── AppBuilderWizard.Page.al (50111)
-│       │     4-step NavigatePage wizard:
-│       │     - Step 1 (Extension Identity): App Name, Publisher, Version
-│       │     - Step 2 (Target Selection): Target Table (lookup from Table
-│       │       Objects), Target Page (custom OnLookup filtering Page Metadata
-│       │       by SourceTable), Advanced: Object IDs
-│       │     - Step 3 (Field & Placement): Field ID, Field Name, Field Data
-│       │       Type (conditional: Field Length for Text/Code, Option String
-│       │       for Option), Placement Type, Anchor Control (custom OnLookup
-│       │       filtering Page Control Field by page)
-│       │     - Step 4 (Review & Build): Read-only review of all inputs,
-│       │       actions: Download App (auto-generates then downloads),
-│       │       Publish App (auto-generates then publishes with Notification
-│       │       for deployment status), Extension Deployment Status
-│       │     Back/Next actions use Visible (hide when not applicable), not
-│       │     Enabled
-│       ├── PageLookup.Page.al (50116)
-│       │     List page for Page Metadata (ID, Name, Caption, SourceTable).
-│       └── PageControlLookup.Page.al (50117)
-│             List page for Page Control Field (Sequence, ControlName),
-│             caption "Select Anchor Control".
-│
-└── PermissionSet.al (50112)
-      Grants execute on all codeunits, RIMD on buffer tabledata, execute
-      on all pages.
+app/                               # Main extension
+└── src/
+    ├── Compiler/                  # Layer 1: Generic .app packaging
+    │   ├── AppBuilder             (50100) Build pipeline orchestrator
+    │   ├── ContentGenerator       (50101) Metadata file generation
+    │   ├── BinaryWriter           (50102) NAVX binary header
+    │   ├── EnvironmentResolver    (50103) BC runtime info detection
+    │   └── AppPublisher           (50110) Download + publish via UploadExtension
+    │
+    ├── ObjectBuilder/             # Layer 2: AL source generation
+    │   ├── Codeunit/
+    │   │   ├── ALCodeWriter       (50104) Structured AL syntax builder
+    │   │   ├── TableExtBuilder    (50105) Table extension source + symref
+    │   │   └── PageExtBuilder     (50106) Page extension source + symref
+    │   └── Enum/
+    │       ├── FieldDataType      (50107) Text, Code, Integer, Decimal, etc.
+    │       └── PlacementType      (50108) addafter, addbefore
+    │
+    ├── PoC/                       # Layer 3: Proof-of-concept UI
+    │   ├── AppBuildRunner         (50114) Wizard workflow orchestrator
+    │   ├── AppBuilderBuffer       (50113) Temporary table for wizard state
+    │   ├── AppBuilderWizard       (50111) 4-step NavigatePage wizard
+    │   ├── PageLookup             (50116) Page Metadata lookup
+    │   └── PageControlLookup      (50117) Anchor control lookup
+    │
+    └── PermissionSet              (50112) Execute on all objects
+
+test/                              # Test extension (depends on main app)
+└── src/                           # ID range 50150-50199
 ```
 
 ### Layer 1: Compiler

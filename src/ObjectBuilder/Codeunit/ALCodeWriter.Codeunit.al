@@ -84,9 +84,9 @@ codeunit 50104 "AL Code Writer"
         Initialize();
         AppendIndent();
         Buffer.Append(BlockKeyword);
-        Buffer.Append('(');
+        Buffer.Append('("');
         Buffer.Append(Arg);
-        Buffer.Append(')');
+        Buffer.Append('")');
         Buffer.Append(GetLf());
         AppendIndent();
         Buffer.Append('{');

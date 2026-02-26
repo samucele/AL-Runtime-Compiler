@@ -49,10 +49,9 @@ codeunit 50106 "Page Ext. Builder"
 
     /// <summary>
     /// Sets where the field group appears on the page.
-    /// For addlast/addfirst, AnchorControl defaults to 'Content' if left empty.
     /// </summary>
-    /// <param name="NewPlacement">The placement type (addlast, addfirst, addafter, addbefore).</param>
-    /// <param name="NewAnchorControl">The anchor control name. Use empty string for addlast/addfirst defaults.</param>
+    /// <param name="NewPlacement">The placement type (addafter, addbefore).</param>
+    /// <param name="NewAnchorControl">The anchor control name from the target page.</param>
     procedure SetPlacement(NewPlacement: Enum "Placement Type"; NewAnchorControl: Text[250])
     begin
         Placement := NewPlacement;
@@ -140,7 +139,7 @@ codeunit 50106 "Page Ext. Builder"
         end;
 
         // ControlChange
-        ChangeObj.Add('Anchor', ResolveAnchorControl());
+        ChangeObj.Add('Anchor', AnchorControl);
         ChangeObj.Add('ChangeKind', GetChangeKind(Placement));
         ChangeObj.Add('Controls', ChangeControls);
         ControlChanges.Add(ChangeObj);
@@ -190,7 +189,7 @@ codeunit 50106 "Page Ext. Builder"
         TargetPageName := '';
         Clear(TargetAppPackageId);
         ObjectId := 0;
-        Placement := "Placement Type"::addlast;
+        Placement := "Placement Type"::addafter;
         AnchorControl := '';
         Clear(PageFieldNames);
         Clear(PageFieldSourceExprs);
@@ -223,7 +222,7 @@ codeunit 50106 "Page Ext. Builder"
         Writer.BeginObject('pageextension', ObjectId, GetObjectName(), 'extends', TargetPageName);
         Writer.BeginBlock('layout');
 
-        Writer.BeginBlockWithArg(GetPlacementKeyword(Placement), ResolveAnchorControl());
+        Writer.BeginBlockWithArg(GetPlacementKeyword(Placement), AnchorControl);
 
         for i := 1 to PageFieldNames.Count() do begin
             Writer.BeginPageField(PageFieldNames.Get(i), PageFieldSourceExprs.Get(i));
@@ -236,45 +235,24 @@ codeunit 50106 "Page Ext. Builder"
         Writer.EndObject();
     end;
 
-    local procedure ResolveAnchorControl(): Text
-    begin
-        if AnchorControl <> '' then
-            exit(AnchorControl);
-
-        // Default anchor for addlast/addfirst
-        exit('Content');
-    end;
-
     local procedure GetPlacementKeyword(PlacementType: Enum "Placement Type"): Text
     begin
         case PlacementType of
-            "Placement Type"::addlast:
-                exit('addlast');
-            "Placement Type"::addfirst:
-                exit('addfirst');
             "Placement Type"::addafter:
                 exit('addafter');
             "Placement Type"::addbefore:
                 exit('addbefore');
-            else
-                exit('addlast');
         end;
     end;
 
     local procedure GetChangeKind(PlacementType: Enum "Placement Type"): Integer
     begin
-        // ChangeKind mapping: addlast=4, addfirst=3, addafter=1, addbefore=2
+        // ChangeKind mapping: addafter=1, addbefore=2
         case PlacementType of
-            "Placement Type"::addlast:
-                exit(4);
-            "Placement Type"::addfirst:
-                exit(3);
             "Placement Type"::addafter:
                 exit(1);
             "Placement Type"::addbefore:
                 exit(2);
-            else
-                exit(4);
         end;
     end;
 

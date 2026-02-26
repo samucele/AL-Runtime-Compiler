@@ -1,5 +1,5 @@
 /// <summary>
-/// Orchestrates the app build workflow for the Dashboard page.
+/// Orchestrates the app build workflow for the App Builder Wizard.
 /// Extracts all business logic from the page into a single runner codeunit,
 /// keeping the page as a thin UI layer. Maintains the generated .app blob
 /// internally and provides methods for generation, download, publish, and preview.
@@ -21,8 +21,7 @@ codeunit 50114 "App Build Runner"
         PageExtIdRequiredErr: Label 'Page Extension Object ID is required.';
         AppGeneratedMsg: Label 'App generated successfully.';
         AppNotGeneratedErr: Label 'Generate an app first.';
-        PublishInitiatedMsg: Label 'Extension upload initiated. Check Extension Deployment Status for progress.';
-        PublishFailedMsg: Label 'Publish failed: %1', Comment = '%1 = Error message';
+        AnchorControlRequiredErr: Label 'Please select an anchor control.';
         PreviewSeparatorTxt: Label '\\---\\', Locked = true;
 
     /// <summary>
@@ -102,44 +101,14 @@ codeunit 50114 "App Build Runner"
     /// Publishes the previously generated .app to the current BC environment
     /// via ExtensionManagement.UploadExtension.
     /// </summary>
-    /// <param name="Rec">The Compiler Setup record to update with deployment status.</param>
-    procedure PublishApp(var Rec: Record "App Builder Buffer")
+    /// <param name="Rec">The App Builder Buffer record.</param>
+    /// <returns>True if the upload was initiated successfully.</returns>
+    procedure PublishApp(var Rec: Record "App Builder Buffer"): Boolean
     var
         Publisher: Codeunit "App Publisher";
     begin
         CheckAppGenerated();
-        Rec.Status := Rec.Status::InProgress;
-        Rec."Status Message" := '';
-        Rec.Modify();
-
-        if Publisher.PublishApp(AppBlob) then begin
-            Rec.Status := Rec.Status::InProgress;
-            Rec.Modify();
-            Message(PublishInitiatedMsg);
-        end else begin
-            Rec.Status := Rec.Status::Failed;
-            Rec."Status Message" := CopyStr(GetLastErrorText(), 1, 250);
-            Rec.Modify();
-            Message(PublishFailedMsg, Rec."Status Message");
-        end;
-    end;
-
-    /// <summary>
-    /// Queries the deployment status from the App Publisher and updates the record.
-    /// </summary>
-    /// <param name="Rec">The Compiler Setup record to update with current status.</param>
-    procedure RefreshStatus(var Rec: Record "App Builder Buffer")
-    var
-        Publisher: Codeunit "App Publisher";
-        StatusValue: Integer;
-        ErrorMsg: Text;
-    begin
-        Publisher.GetDeploymentStatus(StatusValue, ErrorMsg);
-        // Standard values: 0=Unknown,1=InProgress,2=Failed,3=Completed,4=NotFound
-        // Our Option:      0=None,   1=Unknown,   2=InProgress,3=Failed,4=Completed,5=NotFound
-        Rec.Status := StatusValue + 1;
-        Rec."Status Message" := CopyStr(ErrorMsg, 1, 250);
-        Rec.Modify();
+        exit(Publisher.PublishApp(AppBlob));
     end;
 
     /// <summary>
@@ -170,7 +139,7 @@ codeunit 50114 "App Build Runner"
 
     /// <summary>
     /// Returns whether an .app file has been generated in the current session.
-    /// Used by the Dashboard page to enable/disable Download and Publish actions.
+    /// Used by the Wizard page to enable/disable Download and Publish actions.
     /// </summary>
     /// <returns>True if GenerateApp has been called successfully.</returns>
     procedure GetIsAppGenerated(): Boolean
@@ -178,20 +147,54 @@ codeunit 50114 "App Build Runner"
         exit(IsAppGenerated);
     end;
 
+    /// <summary>
+    /// Validates a single wizard step. Called by the wizard page on Next.
+    /// </summary>
+    /// <param name="StepNo">The step number to validate (1-3).</param>
+    /// <param name="Rec">The App Builder Buffer record with current inputs.</param>
+    procedure ValidateStep(StepNo: Integer; var Rec: Record "App Builder Buffer")
+    begin
+        case StepNo of
+            1:
+                begin
+                    if Rec."App Name" = '' then
+                        Error(AppNameRequiredErr);
+                    if Rec.Publisher = '' then
+                        Error(PublisherRequiredErr);
+                end;
+            2:
+                begin
+                    if Rec."Target Table No." <= 0 then
+                        Error(SelectTableErr);
+                    if Rec."Target Page No." <= 0 then
+                        Error(SelectPageErr);
+                end;
+            3:
+                begin
+                    if Rec."Field Name" = '' then
+                        Error(FieldNameRequiredErr);
+                    if Rec."Anchor Control" = '' then
+                        Error(AnchorControlRequiredErr);
+                end;
+        end;
+    end;
+
+    /// <summary>
+    /// Opens the Extension Deployment Status page. Used as a Notification action callback.
+    /// </summary>
+    /// <param name="Notif">The notification that triggered this action.</param>
+    procedure OpenDeploymentStatus(var Notif: Notification)
+    begin
+        Page.Run(Page::"Extension Deployment Status");
+    end;
+
     local procedure ValidateInput(var Rec: Record "App Builder Buffer")
     begin
-        if Rec."App Name" = '' then
-            Error(AppNameRequiredErr);
-        if Rec.Publisher = '' then
-            Error(PublisherRequiredErr);
-        if Rec."Target Table No." <= 0 then
-            Error(SelectTableErr);
-        if Rec."Target Page No." <= 0 then
-            Error(SelectPageErr);
+        ValidateStep(1, Rec);
+        ValidateStep(2, Rec);
+        ValidateStep(3, Rec);
         if Rec."Field Id" <= 0 then
             Error(FieldIdRequiredErr);
-        if Rec."Field Name" = '' then
-            Error(FieldNameRequiredErr);
         if Rec."Table Ext. Object Id" <= 0 then
             Error(TableExtIdRequiredErr);
         if Rec."Page Ext. Object Id" <= 0 then
@@ -204,21 +207,4 @@ codeunit 50114 "App Build Runner"
             Error(AppNotGeneratedErr);
     end;
 
-    local procedure SanitizeName(InputName: Text): Text
-    var
-        Result: TextBuilder;
-        i: Integer;
-        c: Char;
-    begin
-        for i := 1 to StrLen(InputName) do begin
-            c := InputName[i];
-            case true of
-                (c >= 'A') and (c <= 'Z'),
-                (c >= 'a') and (c <= 'z'),
-                (c >= '0') and (c <= '9'):
-                    Result.Append(Format(c));
-            end;
-        end;
-        exit(Result.ToText());
-    end;
 }

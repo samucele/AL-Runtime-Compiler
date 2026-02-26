@@ -2,7 +2,7 @@
   "id": "b094f026-5d3e-43cc-b26e-f08435f6c90e",
   "name": "AL Runtime Compiler",
   "publisher": "Samuele Celebron",
-  "version": "1.0.0.6",
+  "version": "1.0.0.9",
   "brief": "Generate valid BC .app files at runtime from AL code, without the AL compiler.",
   "description": "Proof-of-concept: a 3-layer AL extension that constructs valid .app packages (NAVX header + ZIP + metadata) entirely at runtime using native AL APIs. No alc.exe required.",
   "privacyStatement": "",

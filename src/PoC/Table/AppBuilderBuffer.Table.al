@@ -125,18 +125,6 @@ table 50113 "App Builder Buffer"
             Caption = 'Page Extension Object ID';
             MinValue = 1;
         }
-        field(70; Status; Option)
-        {
-            Caption = 'Status';
-            OptionMembers = None,Unknown,InProgress,Failed,Completed,NotFound;
-            OptionCaption = 'None,Unknown,In Progress,Failed,Completed,Not Found';
-            Editable = false;
-        }
-        field(71; "Status Message"; Text[250])
-        {
-            Caption = 'Status Message';
-            Editable = false;
-        }
     }
 
     keys

@@ -17,5 +17,7 @@ permissionset 50112 "AL Runtime Compiler"
         codeunit "App Publisher" = X,
         codeunit "App Build Runner" = X,
         tabledata "App Builder Buffer" = RIMD,
-        page "App Builder Dashboard" = X;
+        page "App Builder Wizard" = X,
+        page "Page Lookup" = X,
+        page "Page Control Lookup" = X;
 }
